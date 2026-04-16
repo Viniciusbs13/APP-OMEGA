@@ -35,14 +35,18 @@ service cloud.firestore {
     }
     
     function isApproved() {
+      let isAdmin = request.auth.token.email == "viniciusbarbosasampaio71@gmail.com" || 
+                    request.auth.token.email == "assessoriaomega1@gmail.com";
       return isAuthenticated() && 
-             (request.auth.token.email == "viniciusbarbosasampaio71@gmail.com" || 
+             (isAdmin || 
               (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
                getUserData().status == 'approved'));
     }
 
     function isCEO() {
-      let isDefaultAdmin = request.auth.token.email == "viniciusbarbosasampaio71@gmail.com" && request.auth.token.email_verified == true;
+      let isDefaultAdmin = (request.auth.token.email == "viniciusbarbosasampaio71@gmail.com" || 
+                            request.auth.token.email == "assessoriaomega1@gmail.com") && 
+                           request.auth.token.email_verified == true;
       let userPath = /databases/$(database)/documents/users/$(request.auth.uid);
       return isAuthenticated() && (isDefaultAdmin || (exists(userPath) && getUserData().role == 'CEO' && getUserData().status == 'approved'));
     }

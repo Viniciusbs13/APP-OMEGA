@@ -189,7 +189,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
   // Real-time Listeners
   useEffect(() => {
-    if (!user) return;
+    if (!user || userStatus !== 'approved') return;
 
     const unsubscribes = [
       onSnapshot(collection(db, 'clients'), (snap) => {
