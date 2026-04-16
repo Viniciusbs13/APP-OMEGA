@@ -1,0 +1,148 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: userId (auth.uid)
+    // Fields:
+    //   - email: string (required)
+    //   - name: string
+    //   - role: string (required, enum: CEO, RH, Colaborador, Vendedor)
+    //
+    // Collection: clients
+    // Fields:
+    //   - name: string (required)
+    //   - status: string (required)
+    //   - managerId: string (UID of the assigned manager)
+    //   - confidentialData: map (PII - restricted access)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+    
+    function isApproved() {
+      return isAuthenticated() && 
+             (request.auth.token.email == "viniciusbarbosasampaio71@gmail.com" || 
+              (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+               getUserData().status == 'approved'));
+    }
+
+    function isCEO() {
+      let isDefaultAdmin = request.auth.token.email == "viniciusbarbosasampaio71@gmail.com" && request.auth.token.email_verified == true;
+      let userPath = /databases/$(database)/documents/users/$(request.auth.uid);
+      return isAuthenticated() && (isDefaultAdmin || (exists(userPath) && getUserData().role == 'CEO' && getUserData().status == 'approved'));
+    }
+    
+    function isRH() {
+      return isApproved() && getUserData().role == 'RH';
+    }
+    
+    function getUserRole() {
+      return isApproved() ? getUserData().role : 'Colaborador';
+    }
+    
+    function isManager(clientId) {
+      return isApproved() && (isCEO() || resource.data.managerId == request.auth.uid);
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['email', 'role', 'status']) &&
+             data.role in ['CEO', 'RH', 'Colaborador', 'Vendedor'] &&
+             data.status in ['pending', 'approved', 'rejected'];
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      // Users can create their own profile as pending
+      allow create: if isAuthenticated() && request.auth.uid == userId && 
+                      request.resource.data.status == 'pending' &&
+                      request.resource.data.role == 'Colaborador';
+      // Users can update their name/avatar but NOT status or role
+      allow update: if isAuthenticated() && request.auth.uid == userId && 
+                      request.resource.data.status == resource.data.status &&
+                      request.resource.data.role == resource.data.role;
+      // CEO can do everything
+      allow write: if isCEO();
+    }
+
+    match /clients/{clientId} {
+      allow read: if isApproved();
+      allow create: if isCEO() || isRH();
+      allow delete: if isCEO();
+      allow update: if isCEO() || isRH() || (isManager(clientId) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['confidentialData']));
+    }
+
+    match /sales/{saleId} {
+      allow read: if isApproved();
+      allow create: if isApproved();
+      allow update, delete: if isCEO();
+    }
+
+    match /managerTasks/{taskId} {
+      allow read: if isApproved();
+      allow create: if isApproved();
+      allow update: if isApproved();
+      allow delete: if isCEO() || isApproved();
+    }
+
+    match /clientMetrics/{metricId} {
+      allow read: if isApproved();
+      allow create, update, delete: if isCEO() || isRH();
+    }
+
+    match /sellers/{sellerId} {
+      allow read: if isApproved();
+      allow create, update, delete: if isCEO() || isRH();
+    }
+
+    match /goals/{goalId} {
+      allow read: if isApproved();
+      allow create, update, delete: if isCEO();
+    }
+
+    match /captures/{captureId} {
+      allow read: if isApproved();
+      allow create, update, delete: if isCEO() || isRH();
+    }
+
+    match /leads/{leadId} {
+      allow read: if isApproved();
+      allow create, update, delete: if isCEO() || isRH() || getUserRole() == 'Vendedor';
+    }
+
+    match /projects/{projectId} {
+      allow read: if isApproved();
+      allow create, update, delete: if isCEO() || isRH() || getUserRole() == 'Colaborador';
+    }
+
+    match /missions/{missionId} {
+      allow read: if isApproved();
+      allow create, update, delete: if isApproved();
+    }
+
+    match /notes/{noteId} {
+      allow read: if isApproved() && (isCEO() || resource.data.userId == request.auth.uid);
+      allow create: if isApproved() && request.resource.data.userId == request.auth.uid;
+      allow update: if isApproved() && resource.data.userId == request.auth.uid && request.resource.data.userId == request.auth.uid;
+      allow delete: if isApproved() && resource.data.userId == request.auth.uid;
+    }
+  }
+}

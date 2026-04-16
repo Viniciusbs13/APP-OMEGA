@@ -1,0 +1,230 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "System user profile with role and permissions",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "format": "email" },
+        "name": { "type": "string" },
+        "role": { "type": "string", "enum": ["CEO", "RH", "Colaborador", "Vendedor"] },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "avatar": { "type": "string" }
+      },
+      "required": ["email", "role", "status"]
+    },
+    "Client": {
+      "title": "Client",
+      "description": "Customer portfolio document",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "company": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "phone": { "type": "string" },
+        "industry": { "type": "string" },
+        "status": { "type": "string", "enum": ["Ativo", "Onboarding", "Pausado"] },
+        "revenue": { "type": "string" },
+        "managerId": { "type": "string" },
+        "healthStatus": { "type": "string", "enum": ["green", "yellow", "red"] },
+        "confidentialData": {
+          "type": "object",
+          "properties": {
+            "emails": { "type": "string" },
+            "passwords": { "type": "string" },
+            "other": { "type": "string" }
+          }
+        }
+      },
+      "required": ["name", "status"]
+    },
+    "Sale": {
+      "title": "Sale",
+      "description": "Sales transaction record",
+      "type": "object",
+      "properties": {
+        "clientId": { "type": "string" },
+        "clientName": { "type": "string" },
+        "value": { "type": "number" },
+        "sellerId": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" }
+      },
+      "required": ["clientId", "value", "sellerId", "date"]
+    },
+    "ManagerTask": {
+      "title": "ManagerTask",
+      "description": "Recurring tasks for client management",
+      "type": "object",
+      "properties": {
+        "clientId": { "type": "string" },
+        "title": { "type": "string" },
+        "frequency": { "type": "string", "enum": ["daily", "weekly", "monthly", "custom"] },
+        "completed": { "type": "boolean" },
+        "nextOccurrence": { "type": "string", "format": "date-time" }
+      },
+      "required": ["clientId", "title", "frequency", "nextOccurrence"]
+    },
+    "ClientMetricRecord": {
+      "title": "ClientMetricRecord",
+      "description": "Weekly or monthly performance metrics for clients",
+      "type": "object",
+      "properties": {
+        "clientId": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "periodType": { "type": "string", "enum": ["weekly", "monthly"] },
+        "metrics": {
+          "type": "object",
+          "properties": {
+            "conversionRate": { "type": "number" },
+            "viewRate": { "type": "number" },
+            "conversationsStarted": { "type": "number" },
+            "cpv": { "type": "number" },
+            "cpm": { "type": "number" }
+          }
+        },
+        "optimizationsDone": { "type": "string" },
+        "optimizationsDoing": { "type": "string" },
+        "optimizationsToNext": { "type": "string" }
+      },
+      "required": ["clientId", "date", "periodType"]
+    },
+    "Seller": {
+      "title": "Seller",
+      "description": "Sales team member",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "role": { "type": "string" },
+        "avatar": { "type": "string" }
+      },
+      "required": ["name", "role"]
+    },
+    "Goal": {
+      "title": "Goal",
+      "description": "Monthly sales and renewal targets",
+      "type": "object",
+      "properties": {
+        "month": { "type": "string", "description": "YYYY-MM format" },
+        "targetValue": { "type": "number" },
+        "renewalTarget": { "type": "number" }
+      },
+      "required": ["month", "targetValue", "renewalTarget"]
+    },
+    "Capture": {
+      "title": "Capture",
+      "description": "Scheduled content capture session",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "location": { "type": "string" },
+        "clientContact": { "type": "string" },
+        "startDateTime": { "type": "string", "format": "date-time" },
+        "endDateTime": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["Ativo Agora", "Confirmado", "Pendente"] },
+        "type": { "type": "string" }
+      },
+      "required": ["title", "location", "startDateTime", "endDateTime", "status"]
+    },
+    "Lead": {
+      "title": "Lead",
+      "description": "Sales lead in the pipeline",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "desc": { "type": "string" },
+        "value": { "type": "string" },
+        "stage": { "type": "string", "enum": ["prospect", "meeting", "proposal", "closing"] },
+        "status": { "type": "string" }
+      },
+      "required": ["name", "stage"]
+    },
+    "Project": {
+      "title": "Project",
+      "description": "Content production project",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "status": { "type": "string" },
+        "progress": { "type": "number" },
+        "deadline": { "type": "string" },
+        "priority": { "type": "string", "enum": ["Alta", "Média", "Baixa"] },
+        "type": { "type": "string", "enum": ["Plano", "Único"] },
+        "responsible": { "type": "string" }
+      },
+      "required": ["title", "status", "progress", "deadline", "priority", "type"]
+    },
+    "Mission": {
+      "title": "Mission",
+      "description": "Team mission or task",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "completed": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "completed", "createdAt"]
+    },
+    "Note": {
+      "title": "Note",
+      "description": "User personal notes",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "content": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "content", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "/clients/{clientId}": {
+      "schema": "Client",
+      "description": "Client data"
+    },
+    "/sales/{saleId}": {
+      "schema": "Sale",
+      "description": "Sales records"
+    },
+    "/managerTasks/{taskId}": {
+      "schema": "ManagerTask",
+      "description": "Tasks for managers"
+    },
+    "/clientMetrics/{metricId}": {
+      "schema": "ClientMetricRecord",
+      "description": "Performance metrics"
+    },
+    "/sellers/{sellerId}": {
+      "schema": "Seller",
+      "description": "Sales team"
+    },
+    "/goals/{goalId}": {
+      "schema": "Goal",
+      "description": "Sales goals"
+    },
+    "/captures/{captureId}": {
+      "schema": "Capture",
+      "description": "Capture schedule"
+    },
+    "/leads/{leadId}": {
+      "schema": "Lead",
+      "description": "Sales leads"
+    },
+    "/projects/{projectId}": {
+      "schema": "Project",
+      "description": "Production projects"
+    },
+    "/missions/{missionId}": {
+      "schema": "Mission",
+      "description": "Team missions"
+    },
+    "/notes/{noteId}": {
+      "schema": "Note",
+      "description": "User notes"
+    }
+  }
+}
