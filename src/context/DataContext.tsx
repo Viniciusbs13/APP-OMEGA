@@ -27,7 +27,9 @@ interface DataContextType {
   userStatus: UserStatus;
   setUserRole: (role: UserRole) => void;
   allUsers: SystemUser[];
+  addSystemUser: (email: string, name: string, role: UserRole) => Promise<void>;
   updateUserRoleAndStatus: (userId: string, role: UserRole, status: UserStatus) => Promise<void>;
+  deleteSystemUser: (userId: string) => Promise<void>;
   toast: { message: string; type: ToastType } | null;
   showToast: (message: string, type: ToastType) => void;
   hideToast: () => void;
@@ -129,31 +131,64 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       if (firebaseUser) {
         // Fetch user role and status from Firestore
         try {
+          const isAdmin = firebaseUser.email === 'viniciusbarbosasampaio71@gmail.com' || firebaseUser.email === 'assessoriaomega1@gmail.com';
+          
           const userDocRef = doc(db, 'users', firebaseUser.uid);
-          const unsubscribeUser = onSnapshot(userDocRef, (docSnap) => {
+          const unsubscribeUser = onSnapshot(userDocRef, async (docSnap) => {
             if (docSnap.exists()) {
               const data = docSnap.data();
-              setUserRole(data.role as UserRole);
-              setUserStatus(data.status as UserStatus);
-              setUser(firebaseUser);
-              setLoading(false);
+              // For hardcoded admins, always force CEO/Approved even if DB says otherwise
+              if (isAdmin) {
+                setUserRole('CEO');
+                setUserStatus('approved');
+              } else {
+                setUserRole(data.role as UserRole);
+                setUserStatus(data.status as UserStatus);
+              }
             } else {
-              const isAdmin = firebaseUser.email === 'viniciusbarbosasampaio71@gmail.com' || firebaseUser.email === 'assessoriaomega1@gmail.com';
-              const initialData = {
-                email: firebaseUser.email,
-                name: firebaseUser.displayName || 'Novo Usuário',
-                role: isAdmin ? 'CEO' : 'Colaborador',
-                status: isAdmin ? 'approved' : 'pending',
-                avatar: firebaseUser.photoURL || ''
-              };
+              // If UID doc doesn't exist, check for email-based invitation
+              const emailDocRef = doc(db, 'users', firebaseUser.email!.toLowerCase());
               
-              setDoc(userDocRef, initialData).then(() => {
-                setUserRole(initialData.role as UserRole);
-                setUserStatus(initialData.status as UserStatus);
-                setUser(firebaseUser);
-                setLoading(false);
+              // We need a one-time get for the email doc instead of a listener there
+              // to avoid infinite loops if we delete it while listening
+              import('firebase/firestore').then(async ({ getDoc, deleteDoc: delDoc }) => {
+                const emailSnap = await getDoc(emailDocRef);
+                
+                if (emailSnap.exists()) {
+                  const inviteData = emailSnap.data();
+                  // CLaim the invite: Create UID doc and Delete Email doc
+                  await setDoc(userDocRef, {
+                    ...inviteData,
+                    avatar: firebaseUser.photoURL || '',
+                    preApproved: false // now fully registered
+                  });
+                  await delDoc(emailDocRef);
+                  
+                  setUserRole(inviteData.role as UserRole);
+                  setUserStatus('approved');
+                } else {
+                  // No invite found
+                  if (isAdmin) {
+                    setUserRole('CEO');
+                    setUserStatus('approved');
+                    
+                    const initialData = {
+                      email: firebaseUser.email,
+                      name: firebaseUser.displayName || 'CEO',
+                      role: 'CEO',
+                      status: 'approved',
+                      avatar: firebaseUser.photoURL || ''
+                    };
+                    setDoc(userDocRef, initialData);
+                  } else {
+                    setUserRole('Colaborador');
+                    setUserStatus('pending');
+                  }
+                }
               });
             }
+            setUser(firebaseUser);
+            setLoading(false);
           });
           return () => unsubscribeUser();
         } catch (error) {
@@ -178,12 +213,39 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [userRole, userStatus]);
 
+  const addSystemUser = async (email: string, name: string, role: UserRole) => {
+    try {
+      // Create user doc with email as ID for pre-approval
+      const userRef = doc(db, 'users', email.toLowerCase());
+      await setDoc(userRef, {
+        email: email.toLowerCase(),
+        name,
+        role,
+        status: 'approved',
+        avatar: '',
+        preApproved: true
+      });
+      showToast('Usuário pré-aprovado com sucesso!', 'success');
+    } catch (err) {
+      handleFirestoreError(err, OperationType.CREATE, `users/${email}`);
+    }
+  };
+
   const updateUserRoleAndStatus = async (userId: string, role: UserRole, status: UserStatus) => {
     try {
       await updateDoc(doc(db, 'users', userId), { role, status });
       showToast('Usuário atualizado com sucesso!', 'success');
     } catch (err) {
       handleFirestoreError(err, OperationType.UPDATE, `users/${userId}`);
+    }
+  };
+
+  const deleteSystemUser = async (userId: string) => {
+    try {
+      await deleteDoc(doc(db, 'users', userId));
+      showToast('Usuário removido!', 'success');
+    } catch (err) {
+      handleFirestoreError(err, OperationType.DELETE, `users/${userId}`);
     }
   };
 
@@ -448,7 +510,9 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       userRole, setUserRole,
       userStatus,
       allUsers,
+      addSystemUser,
       updateUserRoleAndStatus,
+      deleteSystemUser,
       toast, showToast, hideToast,
       leads, addLead, moveLead, deleteLead,
       projects, addProject, updateProjectProgress, updateProject, deleteProject,

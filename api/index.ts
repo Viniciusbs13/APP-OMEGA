@@ -170,9 +170,12 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server running on http://localhost:${PORT}`);
-  });
+  // Only listen if we're not on Vercel (which handles the server itself)
+  if (!process.env.VERCEL) {
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`Server running on http://localhost:${PORT}`);
+    });
+  }
 
   return app;
 }

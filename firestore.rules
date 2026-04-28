@@ -75,16 +75,10 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow read: if isAuthenticated();
-      // Users can create their own profile as pending
-      allow create: if isAuthenticated() && request.auth.uid == userId && 
-                      request.resource.data.status == 'pending' &&
-                      request.resource.data.role == 'Colaborador';
-      // Users can update their name/avatar but NOT status or role
-      allow update: if isAuthenticated() && request.auth.uid == userId && 
-                      request.resource.data.status == resource.data.status &&
-                      request.resource.data.role == resource.data.role;
-      // CEO can do everything
-      allow write: if isCEO();
+      // Only the CEO can create or delete users
+      allow create, delete: if isCEO();
+      // Users can update their own profile name/avatar if they are approved
+      allow update: if isCEO() || (isAuthenticated() && request.auth.uid == userId && isApproved());
     }
 
     match /clients/{clientId} {

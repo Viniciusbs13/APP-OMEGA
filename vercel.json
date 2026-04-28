@@ -1,17 +1,13 @@
 {
   "version": 2,
   "rewrites": [
-    {
-      "source": "/api/(.*)",
-      "destination": "/server.ts"
-    },
-    {
-      "source": "/auth/(.*)",
-      "destination": "/server.ts"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
+    { "source": "/api/(.*)", "destination": "/api/index.ts" },
+    { "source": "/auth/(.*)", "destination": "/api/index.ts" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ],
+  "functions": {
+    "api/index.ts": {
+      "maxDuration": 15
     }
-  ]
+  }
 }

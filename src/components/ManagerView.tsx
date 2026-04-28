@@ -39,7 +39,9 @@ export default function ManagerView() {
     updateClient,
     showToast,
     allUsers,
-    updateUserRoleAndStatus
+    addSystemUser,
+    updateUserRoleAndStatus,
+    deleteSystemUser
   } = useData();
 
   const [activeTab, setActiveTab] = useState<'dashboard' | 'collaborators'>('dashboard');
@@ -52,6 +54,29 @@ export default function ManagerView() {
     daysOfWeek: [1],
     nextOccurrence: new Date().toISOString()
   });
+  const [isUserModalOpen, setIsUserModalOpen] = useState(false);
+  const [newUser, setNewUser] = useState({
+    email: '',
+    name: '',
+    role: 'Colaborador' as any
+  });
+  
+  const handleAddUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const emailExists = allUsers.some(u => u.email.toLowerCase() === newUser.email.toLowerCase());
+      if (emailExists) {
+        showToast('Este e-mail já está cadastrado!', 'error');
+        return;
+      }
+
+      await addSystemUser(newUser.email, newUser.name, newUser.role);
+      setIsUserModalOpen(false);
+      setNewUser({ email: '', name: '', role: 'Colaborador' });
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const myClients = clients.filter(c => c.managerId === currentUserId);
   const myTasks = managerTasks.filter(t => {
@@ -292,9 +317,17 @@ export default function ManagerView() {
         <section className="space-y-8 animate-in fade-in duration-500">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="glass-panel p-6 rounded-2xl ghost-border col-span-1 md:col-span-3">
-              <div className="flex items-center gap-3 mb-6">
-                <Users className="text-white" />
-                <h3 className="text-lg font-headline font-bold text-white">Solicitações de Acesso</h3>
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <Users className="text-white" />
+                  <h3 className="text-lg font-headline font-bold text-white">Gestão de Colaboradores</h3>
+                </div>
+                <button 
+                  onClick={() => setIsUserModalOpen(true)}
+                  className="px-4 py-2 rounded-xl bg-white text-on-primary text-[10px] font-bold uppercase tracking-widest signature-glow flex items-center gap-2 hover:scale-95 transition-transform"
+                >
+                  <Plus size={16} /> Adicionar Membro
+                </button>
               </div>
               
               <div className="overflow-x-auto">
@@ -383,6 +416,13 @@ export default function ManagerView() {
                                   Reativar
                                 </button>
                               )}
+                              <button 
+                                onClick={() => deleteSystemUser(user.id)}
+                                className="p-1.5 rounded-lg text-on-surface-variant hover:text-red-500 transition-all ml-2"
+                                title="Remover Usuário"
+                              >
+                                <Trash2 size={14} />
+                              </button>
                             </div>
                           </td>
                         </tr>
@@ -461,6 +501,53 @@ export default function ManagerView() {
           </div>
           <button type="submit" className="w-full py-4 rounded-xl bg-white text-on-primary font-bold uppercase tracking-widest signature-glow mt-4">
             Salvar Tarefa
+          </button>
+        </form>
+      </Modal>
+      
+      {/* Modal: Novo Usuário */}
+      <Modal isOpen={isUserModalOpen} onClose={() => setIsUserModalOpen(false)} title="Adicionar Novo Membro">
+        <form onSubmit={handleAddUser} className="space-y-4">
+          <div className="space-y-2">
+            <label className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Nome Completo</label>
+            <input 
+              required
+              type="text" 
+              value={newUser.name}
+              onChange={e => setNewUser({...newUser, name: e.target.value})}
+              className="w-full bg-surface-highest ghost-border rounded-xl px-4 py-3 text-white focus:outline-none"
+              placeholder="Ex: João Silva"
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">E-mail do Google</label>
+            <input 
+              required
+              type="email" 
+              value={newUser.email}
+              onChange={e => setNewUser({...newUser, email: e.target.value})}
+              className="w-full bg-surface-highest ghost-border rounded-xl px-4 py-3 text-white focus:outline-none"
+              placeholder="usuario@gmail.com"
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-[10px] font-bold uppercase tracking-widest text-on-surface-variant">Cargo / Acesso</label>
+            <select 
+              value={newUser.role}
+              onChange={e => setNewUser({...newUser, role: e.target.value as any})}
+              className="w-full bg-surface-highest ghost-border rounded-xl px-4 py-3 text-white focus:outline-none"
+            >
+              <option value="Colaborador">Colaborador</option>
+              <option value="Vendedor">Vendedor</option>
+              <option value="RH">RH</option>
+              <option value="CEO">CEO</option>
+            </select>
+          </div>
+          <p className="text-[10px] text-on-surface-variant italic">
+            O colaborador terá acesso liberado assim que fizer o login com este e-mail.
+          </p>
+          <button type="submit" className="w-full py-4 rounded-xl bg-white text-on-primary font-bold uppercase tracking-widest signature-glow mt-4">
+            Liberar Acesso
           </button>
         </form>
       </Modal>

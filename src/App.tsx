@@ -40,15 +40,15 @@ function AppContent() {
     return (
       <div className="min-h-screen bg-surface-lowest flex flex-col items-center justify-center p-6 text-center space-y-8">
         <div className="w-20 h-20 bg-amber-500/10 rounded-full flex items-center justify-center border border-amber-500/20 animate-pulse">
-          <Clock size={40} className="text-amber-500" />
+          <ShieldAlert size={40} className="text-amber-500" />
         </div>
         <div className="max-w-md space-y-4">
-          <h2 className="text-3xl font-headline font-bold text-white tracking-tight">Solicitação Pendente</h2>
+          <h2 className="text-3xl font-headline font-bold text-white tracking-tight text-balance">Acesso Restrito</h2>
           <p className="text-on-surface-variant leading-relaxed">
-            Seu cadastro foi recebido com sucesso. Agora, o CEO da <strong>Assessoria Omega</strong> precisa aprovar seu acesso e definir seu cargo.
+            Esta é uma área privada da <strong>Assessoria Omega</strong>. O seu acesso ainda não foi autorizado por um administrador.
           </p>
           <div className="p-4 bg-white/5 rounded-xl border border-white/10 text-xs text-on-surface-variant italic">
-            Você será notificado assim que seu acesso for liberado.
+            Se você é um novo colaborador, solicite ao CEO que libere seu acesso enviando seu e-mail de login.
           </div>
         </div>
         <button 
