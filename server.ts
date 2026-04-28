@@ -14,17 +14,28 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
+  app.use((req, res, next) => {
+    console.log(`${req.method} ${req.url}`);
+    next();
+  });
+
   app.use(express.json());
 
   // Google OAuth Configuration
-  const REDIRECT_URI = `${process.env.APP_URL || 'http://localhost:3000'}/auth/callback`;
-  console.log('Google OAuth Redirect URI:', REDIRECT_URI);
+  const getRedirectUri = (req: express.Request) => {
+    if (process.env.APP_URL) return `${process.env.APP_URL}/auth/callback`;
+    const protocol = req.protocol === 'http' && req.headers['x-forwarded-proto'] ? req.headers['x-forwarded-proto'] : req.protocol;
+    const host = req.headers.host;
+    return `${protocol}://${host}/auth/callback`;
+  };
 
-  const oauth2Client = new google.auth.OAuth2(
-    process.env.GOOGLE_CLIENT_ID,
-    process.env.GOOGLE_CLIENT_SECRET,
-    REDIRECT_URI
-  );
+  const getOauthClient = (req: express.Request) => {
+    return new google.auth.OAuth2(
+      process.env.GOOGLE_CLIENT_ID,
+      process.env.GOOGLE_CLIENT_SECRET,
+      getRedirectUri(req)
+    );
+  };
 
   // API Routes
   app.get('/api/health', (req, res) => {
@@ -33,7 +44,8 @@ async function startServer() {
 
   // OAuth URL endpoint
   app.get('/api/auth/google/url', (req, res) => {
-    console.log('Generating Google Auth URL with Client ID:', process.env.GOOGLE_CLIENT_ID ? 'Present' : 'Missing');
+    const oauth2Client = getOauthClient(req);
+    console.log('Generating Google Auth URL for redirect:', getRedirectUri(req));
     const url = oauth2Client.generateAuthUrl({
       access_type: 'offline',
       scope: [
@@ -49,6 +61,7 @@ async function startServer() {
   // OAuth Callback
   app.get(['/auth/callback', '/auth/callback/'], async (req, res) => {
     const { code } = req.query;
+    const oauth2Client = getOauthClient(req);
     try {
       const { tokens } = await oauth2Client.getToken(code as string);
       // In a real app, you'd store tokens in a database associated with the user
@@ -83,6 +96,7 @@ async function startServer() {
     const { tokens, capture } = req.body;
     if (!tokens) return res.status(401).json({ error: 'Not authenticated' });
 
+    const oauth2Client = getOauthClient(req);
     oauth2Client.setCredentials(tokens);
     const calendar = google.calendar({ version: 'v3', auth: oauth2Client });
 
@@ -118,6 +132,7 @@ async function startServer() {
     const { tokens, folderName } = req.body;
     if (!tokens) return res.status(401).json({ error: 'Not authenticated' });
 
+    const oauth2Client = getOauthClient(req);
     oauth2Client.setCredentials(tokens);
     const drive = google.drive({ version: 'v3', auth: oauth2Client });
 
@@ -143,6 +158,7 @@ async function startServer() {
     const { id } = req.params;
     if (!tokens) return res.status(401).json({ error: 'Not authenticated' });
 
+    const oauth2Client = getOauthClient(req);
     oauth2Client.setCredentials(tokens);
     const drive = google.drive({ version: 'v3', auth: oauth2Client });
 
@@ -170,12 +186,9 @@ async function startServer() {
     });
   }
 
-  // Only listen if we're not on Vercel (which handles the server itself)
-  if (!process.env.VERCEL) {
-    app.listen(PORT, '0.0.0.0', () => {
-      console.log(`Server running on http://localhost:${PORT}`);
-    });
-  }
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+  });
 
   return app;
 }

@@ -1,5 +1,5 @@
 {
-  "name": "Remix: ASSESSORIA OMEGA",
+  "name": "ASSESSORIA OMEGA",
   "description": "Sistema de CRM e Dashboard Analítico de alto padrão para a Assessoria Omega, com gestão de clientes, metas de vendas, mural de tarefas recorrentes e integração com Google Drive/Agenda.",
   "requestFramePermissions": [
     "geolocation"
